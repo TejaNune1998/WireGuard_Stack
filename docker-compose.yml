@@ -42,15 +42,15 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.wireguard.entrypoints=http"
-      - "traefik.http.routers.wireguard.rule=Host(`wireguard.miniverse.com.co`)"
+      - "traefik.http.routers.wireguard.rule=Host(`wireguard.</domain.com>`)"
       - "traefik.http.middlewares.wireguard-https-redirect.redirectscheme.scheme=https"
       - "traefik.http.routers.wireguard.middlewares=wireguard-https-redirect"
       - "traefik.http.routers.wireguard-secure.entrypoints=https"
-      - "traefik.http.routers.wireguard-secure.rule=Host(`wireguard.miniverse.com.co`)"
+      - "traefik.http.routers.wireguard-secure.rule=Host(`wireguard.</domain.com>`)"
       - "traefik.http.routers.wireguard-secure.tls=true"
       - "traefik.http.routers.wireguard-secure.service=wireguard"
       - "traefik.http.services.wireguard.loadbalancer.server.port=51821"
-      - "traefik.docker.network=proxy"
+      - "traefik.docker.network=</traefik_network>"
 
 networks:
   </traefik_network>:
