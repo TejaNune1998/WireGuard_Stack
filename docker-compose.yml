@@ -1,0 +1,57 @@
+services:
+  wg-easy:
+    environment:
+      # ⚠️ Required:
+      # Change this to your host's public address
+      - WG_HOST=vpn.</domain.com> # The public hostname of your VPN server.
+
+      # Optional:
+      - PASSWORD=</passwd> # When set, requires a password when logging in to the Web UI.
+      # - WG_PORT=51820 # The public UDP port of your VPN server. WireGuard will always listen on 51820 inside the Docker container.
+      - WG_DEFAULT_ADDRESS=10.8.0.x # Clients IP address range.
+      - WG_DEFAULT_DNS=</dns1>, </dns2> # DNS server clients will use.
+      # - WG_MTU=1420 # The MTU the clients will use. Server uses default WG MTU.
+
+      # Split Tunnel (ONLY internal network through VPN)
+      #- WG_ALLOWED_IPS=</internal_network>
+
+      # Full Tunnel (ALL traffic including internet through VPN)
+      - WG_ALLOWED_IPS=</internal_network>, 0.0.0.0/0
+
+      # Add routing and NAT for internal network access
+      - WG_POST_UP=iptables -A FORWARD -i wg0 -o eth0 -j ACCEPT; iptables -A FORWARD -i eth0 -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT; iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+      - WG_POST_DOWN=iptables -D FORWARD -i wg0 -o eth0 -j ACCEPT; iptables -D FORWARD -i eth0 -o wg0 -m state --state RELATED,ESTABLISHED -j ACCEPT; iptables -t nat -D POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+
+    image: weejewel/wg-easy
+    container_name: wg-easy
+    hostname: wg-easy
+    volumes:
+      - /opt/docker_files/wireguard/data/wireguard:/etc/wireguard
+    ports:
+      - "51820:51820/udp"  # WireGuard VPN port - must stay exposed
+      - "51821:51821/tcp"
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      - </traefik_network>
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wireguard.entrypoints=http"
+      - "traefik.http.routers.wireguard.rule=Host(`wireguard.miniverse.com.co`)"
+      - "traefik.http.middlewares.wireguard-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.wireguard.middlewares=wireguard-https-redirect"
+      - "traefik.http.routers.wireguard-secure.entrypoints=https"
+      - "traefik.http.routers.wireguard-secure.rule=Host(`wireguard.miniverse.com.co`)"
+      - "traefik.http.routers.wireguard-secure.tls=true"
+      - "traefik.http.routers.wireguard-secure.service=wireguard"
+      - "traefik.http.services.wireguard.loadbalancer.server.port=51821"
+      - "traefik.docker.network=proxy"
+
+networks:
+  </traefik_network>:
+    external: true
